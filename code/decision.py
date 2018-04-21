@@ -1,18 +1,212 @@
 import numpy as np
 import time
+from enum import Enum
+import typing as t 
+import random
 
-def is_back_mode(Rover):
-    # Prevent stucked rover
-    if Rover.vel < 0.001:
-        if (time.time() - Rover.stucked_time >= Rover.slipout_time_on_stucked):
-            print("      stucked, go back ")
+# For mode
+class MainMode(Enum):
+    FORWORD = 'forward'
+    STOP = 'stop'
+    BACK = 'back'
+    APPROACH_ROCK = 'approach_rock'
+
+
+# For submode in MainMode
+class SubMode(Enum):
+    NONE = -1
+    
+    # Approaching Rock
+    TURN_TO_ROCK = 10
+    FORWARD_TO_ROCK = 11
+    READY_TO_PICK = 12
+    PICKUP_ROCK = 13
+
+    # Back
+    BACK_TO_UNSTUCK = 20
+    FORWARD_TO_UNSTUCK = 21
+
+
+def set_mode(Rover, mode: MainMode, submode: SubMode):
+    Rover.mode = mode
+    set_submode(Rover, submode)
+
+def set_submode(Rover, submode: SubMode):
+    Rover.submode = submode
+    Rover.submode_time = time.time()
+
+
+# Prevent stucked rover
+def check_stuck(Rover, timeout_time = None):
+    if Rover.old_pos is None:
+        Rover.old_pos = Rover.pos.copy()
+        Rover.stucked_time = time.time()
+        return
+    
+    # Set default timeout value
+    if timeout_time is None:
+        timeout_time = Rover.slipout_time_on_stucked
+
+    dxy = (abs(Rover.pos[0] - Rover.old_pos[0]), abs(Rover.pos[1] - Rover.old_pos[1]))
+    print('@ Rover.pos:', Rover.pos, Rover.old_pos, dxy)
+
+    _thres = 0.01
+    if (dxy[0] < _thres) and (dxy[1] < _thres):
+        print('  position is almost same.')
+
+        if (time.time() - Rover.stucked_time >= timeout_time):
+            print("      rover is stucked, go back")
+
             Rover.throttle = -Rover.throttle_set
             Rover.brake = 0
             Rover.steer = 0
-            Rover.mode = 'back'
+
+            set_mode(Rover, MainMode.BACK, SubMode.BACK_TO_UNSTUCK)
+
             Rover.stucked_time = time.time()
+            Rover.found_rock = False
     else:
         Rover.stucked_time = time.time()
+
+    Rover.old_pos = Rover.pos.copy()
+
+# Return nearst rock data, (dist,angle)|None
+def find_nearest_rock(Rover) -> t.Optional[t.Tuple[float, float]]:
+    if Rover.rock_pos is None:
+        return None
+    
+    print('find_nearest_rock()')
+    delta = (Rover.rock_pos[0] - Rover.pos[0], Rover.rock_pos[1] - Rover.pos[1])
+    dist = np.sqrt(delta[0]**2 + delta[1]**2)
+    angle = np.arctan2(delta[1], delta[0])
+
+    print('  @ position:', {'pos': Rover.pos, 'rock': Rover.rock_pos})
+    print('  @ delta:', delta)
+    print('  @ nearest_rock: ', {'dist': dist, 'angle': (angle, angle*180/np.pi), 'yaw': Rover.yaw})
+    
+    return (dist, angle)
+
+
+# Invoke back(do unstuck)
+def do_back(Rover):
+    if Rover.submode == SubMode.BACK_TO_UNSTUCK:
+        if (time.time() - Rover.stucked_time < 4):
+            print("      go back  to unstuck! ")
+            Rover.throttle = -Rover.throttle_set
+            Rover.brake = 0
+            Rover.steer = 20
+        else:
+            Rover.stucked_time = time.time()
+            set_submode(Rover, SubMode.FORWARD_TO_UNSTUCK)
+            Rover.throttle = Rover.throttle_set
+
+    elif Rover.submode == SubMode.FORWARD_TO_UNSTUCK:
+        if (time.time() - Rover.stucked_time < 6):
+            print("      go forward to unstuck! ")
+
+            if Rover.vel < Rover.max_vel:
+                Rover.throttle = Rover.throttle_set
+            else:
+                Rover.throttle = 0
+            
+            Rover.brake = 0
+            Rover.steer = -20
+        else:
+            Rover.stucked_time = time.time()
+            if (random.randint(0,1) == 0):
+                set_mode(Rover, MainMode.FORWORD, SubMode.NONE)
+            else:
+                set_mode(Rover, MainMode.STOP, SubMode.NONE)
+
+
+    print("      :", {
+        'vel': Rover.vel, 'throttle': Rover.throttle, 
+        'brake': Rover.brake, 'steer': Rover.steer})
+
+
+# Invoke approch rock 
+def do_approch_rock_mode(Rover):
+    result = find_nearest_rock(Rover)
+    if result is None:
+        set_mode(Rover, MainMode.FORWORD, SubMode.NONE)
+        return
+    else:
+        rock_dist, rock_angle = result
+
+    # 0..360 -> -180..180
+    yaw = Rover.yaw if Rover.yaw <= 180 else Rover.yaw -360
+
+    rock_deg = rock_angle*180/np.pi
+    # Humm... (inefficient delta)
+    delta_angle = rock_deg - yaw
+
+    # if (len(Rover.nav_angles) >= Rover.stop_forward):
+    # else:
+        
+    # Turn to nearest rock
+    if Rover.submode == SubMode.TURN_TO_ROCK:
+        Rover.throttle = 0
+        
+        # Turn
+        #_max_delta = abs(delta_angle) / 5
+        _max_delta = 10
+        Rover.steer = np.clip(delta_angle, -_max_delta, _max_delta)
+        print('@ delta_angle:', {'delta_angle': delta_angle, '_max_delta': _max_delta})
+
+        # Stop
+        if Rover.vel > 0:
+            Rover.brake = Rover.brake_set
+        else:
+            Rover.brake = 0
+
+        if abs(delta_angle) < 3.0:
+            Rover.steer = 0
+            set_submode(Rover, SubMode.FORWARD_TO_ROCK)
+    
+    # Go forward
+    elif Rover.submode == SubMode.FORWARD_TO_ROCK:
+        if Rover.vel < Rover.max_vel:
+            Rover.throttle = Rover.throttle_set / 2
+        else:
+            Rover.throttle = 0
+        Rover.steer = 0
+        Rover.brake = 0
+
+        if abs(delta_angle) > 6.0:
+            set_submode(Rover, SubMode.TURN_TO_ROCK)
+
+        # Close enough
+        if rock_dist < 0.4:
+            Rover.brake = Rover.brake_set
+            Rover.throttle = 0
+            set_submode(Rover, SubMode.READY_TO_PICK)
+            Rover.stucked_time = time.time()
+
+    # Wait for pickup
+    elif Rover.submode == SubMode.READY_TO_PICK:
+        Rover.brake = Rover.brake_set
+        Rover.steer = 0
+        Rover.throttle = 0
+
+        # To `near_sample` flag
+        if Rover.vel == 0.0:
+            Rover.throttle = 0
+            Rover.brake = 0
+            Rover.steer = -20  # Turn here
+
+    
+    check_stuck(Rover, timeout_time=16)
+    
+    nav_angle = np.mean(Rover.nav_angles)
+    print('      :', {
+        'found': Rover.found_rock,
+        'mean_nav_angle': [nav_angle, nav_angle*180/np.pi], 
+        'len_nav_angle': len(Rover.nav_angles),
+        'vel': Rover.vel, 
+        'rock_dest': rock_dist,
+        'rock_angle': rock_deg,
+        'yaw': Rover.yaw,
+        'steer': Rover.steer})
 
 
 # This is where you can build a decision tree for determining throttle, brake and steer 
@@ -24,17 +218,13 @@ def decision_step(Rover):
     # improve on this decision tree to do a good job of navigating autonomously!
     print("decision_step() begin...")
 
-    # Example:
     # Check if we have vision data to make decisions with
     if Rover.nav_angles is not None:
         # Check for Rover.mode status
-        if Rover.mode == 'forward':
-            print("  @mode = forward")
-
+        print("  @mode:", Rover.mode, ', submode:', Rover.submode)
+        if Rover.mode == MainMode.FORWORD:
             # Check the extent of navigable terrain
-            if (len(Rover.nav_angles) >= Rover.stop_forward):# \
-                    #or (Rover.found_rock):
-                
+            if (len(Rover.nav_angles) >= Rover.stop_forward):
                 print("    In throttle and turn:", len(Rover.nav_angles))
 
                 # If mode is forward, navigable terrain looks good 
@@ -46,12 +236,12 @@ def decision_step(Rover):
                     Rover.throttle = 0
                 Rover.brake = 0
 
-                if not is_back_mode(Rover):
-                    # right hand side...
-                    #add_angle = +0.05 * 180/np.pi
-                    # Set steering to average angle clipped to the range +/- 15
-                    #Rover.steer = np.clip(np.mean(Rover.nav_angles * 180/np.pi + add_angle), -20, 20)
-                    Rover.steer = np.clip(np.mean(Rover.nav_angles * 180/np.pi), -10, 10)
+                #bias = np.std(Rover.nav_angles) * 180/np.pi # Add bias
+                bias = 0
+                # Set steering to average angle clipped to the range +/- x
+                Rover.steer = np.clip(np.mean(Rover.nav_angles * 180/np.pi) + bias, -15, 15)
+
+                check_stuck(Rover)
 
                 print("      :", {
                     'vel': Rover.vel, 'throttle': Rover.throttle, 
@@ -66,16 +256,14 @@ def decision_step(Rover):
                 # Set brake to stored brake value
                 Rover.brake = Rover.brake_set
                 Rover.steer = 0
-                Rover.mode = 'stop'
+                Rover.mode = MainMode.STOP
 
                 print("      :", {
                     'vel': Rover.vel, 'throttle': Rover.throttle, 
                     'brake': Rover.brake, 'steer': Rover.steer})
 
         # If we're already in "stop" mode then make different decisions
-        elif Rover.mode == 'stop':
-            print("  @mode = stop")
-
+        elif Rover.mode == MainMode.STOP:
             # If we're in stop mode but still moving keep braking
             if Rover.vel > 0.2:
                 print("    more stop: vel:", Rover.vel)
@@ -97,7 +285,7 @@ def decision_step(Rover):
                     # Release the brake to allow turning
                     Rover.brake = 0
                     # Turn range is +/- 15 degrees, when stopped the next line will induce 4-wheel turning
-                    Rover.steer = -30 # Could be more clever here about which way to turn
+                    Rover.steer = -15 # Could be more clever here about which way to turn
 
                 # If we're stopped but see sufficient navigable terrain in front then go!
                 if len(Rover.nav_angles) >= Rover.go_forward:
@@ -110,38 +298,17 @@ def decision_step(Rover):
                     # Set steer to mean angle
                     Rover.steer = np.clip(np.mean(Rover.nav_angles * 180/np.pi), -15, 15)
                     Rover.stucked_time = time.time()
-                    Rover.mode = 'forward'
+                    Rover.mode = MainMode.FORWORD
 
                     print("      :", {
                         'vel': Rover.vel, 'throttle': Rover.throttle, 
                         'brake': Rover.brake, 'steer': Rover.steer})
 
-        elif Rover.mode == 'back':
-            print("  @mode = back")
-            if (time.time() - Rover.stucked_time < 4):
-                print("      go back! ")
-                Rover.throttle = 0
-                Rover.brake = 0
-                Rover.steer = -30
-            else:
-                Rover.throttle = Rover.throttle_set
-                Rover.stucked_time = time.time()
-                Rover.mode = 'forward'
-            
-            # print("  @mode = back")
-            # if (time.time() - Rover.stucked_time < 2):
-            #     print("      go back! ")
-            #     Rover.throttle = -Rover.throttle_set
-            #     Rover.brake = 0
-            #     Rover.steer = 0
-            # else:
-            #     Rover.throttle = Rover.throttle_set
-            #     Rover.stucked_time = time.time()
-            #     Rover.mode = 'forward'
-            print("      :", {
-                'vel': Rover.vel, 'throttle': Rover.throttle, 
-                'brake': Rover.brake, 'steer': Rover.steer})
+        elif Rover.mode == MainMode.BACK:
+            do_back(Rover)
 
+        elif Rover.mode == MainMode.APPROACH_ROCK:
+            do_approch_rock_mode(Rover)
 
     # Just to make the rover do something 
     # even if no modifications have been made to the code
@@ -151,11 +318,23 @@ def decision_step(Rover):
         Rover.steer = 0
         Rover.brake = 0
 
+    # When found rock 
+    # if (Rover.found_rock) and (Rover.mode in [ MainMode.FORWORD, MainMode.BACK ]):
+    #     if len(Rover.nav_angles) > Rover.stop_forward:
+    #         print("Found rock, change mode to approach_rock!")
+    #         print('  @', {'found_rock': Rover.found_rock, 'rock_pos': Rover.rock_pos})
+    #         set_mode(Rover, MainMode.APPROACH_ROCK, SubMode.TURN_TO_ROCK)
+    #     else:
+    #         print("Found rock, but no road to forward now!")
 
     # If in a state where want to pickup a rock send pickup command
     if Rover.near_sample and Rover.vel == 0 and not Rover.picking_up:
         print("begin pickup.")
         Rover.send_pickup = True
+
+        Rover.rock_pos = None
+        Rover.found_rock = False
+        set_mode(Rover, MainMode.FORWORD, SubMode.NONE)
 
     print("pickup flags: ", {
         'near_sample': Rover.near_sample, 

@@ -140,6 +140,14 @@ def create_output_images(Rover):
                   cv2.FONT_HERSHEY_COMPLEX, 0.4, (255, 255, 255), 1)
       cv2.putText(map_add,"  Collected: "+str(Rover.samples_collected), (0, 85), 
                   cv2.FONT_HERSHEY_COMPLEX, 0.4, (255, 255, 255), 1)
+
+      mode_str = Rover.mode.name if Rover.mode is not None else Rover.mode
+      cv2.putText(map_add,"Mode: "+str(mode_str), (0, 110), 
+                  cv2.FONT_HERSHEY_COMPLEX, 0.4, (200, 200, 255), 1)
+      submode_str = Rover.submode.name if Rover.submode is not None else Rover.submode
+      cv2.putText(map_add,"  Sub: "+str(submode_str), (0, 125), 
+                  cv2.FONT_HERSHEY_COMPLEX, 0.4, (200, 200, 255), 1)
+
       # Convert map and vision image to base64 strings for sending to server
       pil_img = Image.fromarray(map_add.astype(np.uint8))
       buff = BytesIO()

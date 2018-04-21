@@ -121,18 +121,23 @@ def perception_step(Rover):
 
     # Far distance consider as obstacles (sky or...)
     masked_height = int(_warped_img.shape[0] / 4)
+    #h, w, _ = img.shape
     warped_img = np.copy(_warped_img)
+    _mask_h = 60
+    warped_img[:_mask_h,:] = 0
+    #warped_img[:60,:] = 0
+    #warped_img[:,:int(w/6)] = 0
+    #warped_img[:,int(w/6):] = 0
     #warped_img[:80,:] = 0
-    warped_img[:60,:] = 0
-    #warped_img[:80,:] = 0
+    warped_obst_img[:_mask_h,:] = 0
 
     # 3) Apply color threshold to identify navigable terrain/obstacles/rock samples
     _threshed_navi_img = color_thresh(warped_img, (160, 160, 160))
     threshed_obst_img = np.absolute(np.float32(_threshed_navi_img) - 1) * warped_obst_img
 
-    # Reduce image to improve fidelity
-    # ref. https://docs.opencv.org/3.1.0/d9/d61/tutorial_py_morphological_ops.html
-    kernel = np.ones((6,6), np.uint8)
+    # # Reduce image to improve fidelity
+    # # ref. https://docs.opencv.org/3.1.0/d9/d61/tutorial_py_morphological_ops.html
+    kernel = np.ones((5,5), np.uint8)
     # kernel = np.array([
     #     [0,1,1,1,0],
     #     [0,1,1,1,0],
@@ -140,6 +145,7 @@ def perception_step(Rover):
     #     [0,0,0,0,0],
     #     [0,0,0,0,0]], np.uint8) 
     threshed_navi_img = cv2.erode(_threshed_navi_img, kernel)
+    #threshed_navi_img = _threshed_navi_img
 
 
     # 4) Update Rover.vision_image (this will be displayed on left side of screen)
@@ -188,10 +194,17 @@ def perception_step(Rover):
     Rover.nav_dists = dist
     Rover.nav_angles = angles
 
-    rocks_img = find_rocks_by_hsv(_warped_img)
+    # find rocks
+    #rocks_img = find_rocks_by_hsv(_warped_img)
+    #_img = np.copy(_warped_img)
+    rocks_img = find_rocks_by_hsv(_warped_img) # Ignore rocks too far
+    rocks_img[:40,:] = 0
+
     if rocks_img.any():
         # rocks as GREEN on rover view
         Rover.vision_image[:, :, 1] = rocks_img * 255
+        #Rover.vision_image[rocks_img > 0, 1] = 255 
+        #Rover.vision_image[rocks_img > 0] = (255, 255, 255)  # highlight
 
         rock_xpix, rock_ypix = rover_coords(rocks_img)
         rock_x_world, rock_y_world = pix_to_world(
@@ -199,28 +212,23 @@ def perception_step(Rover):
         
         # Get a point that most closely rocks
         rock_dist, rock_angles = to_polar_coords(rock_xpix, rock_ypix)
-        rock_i = np.argmin(rock_dist)
-        rock_d = rock_dist[rock_i]
-        rock_x = rock_x_world[rock_i]
-        rock_y = rock_y_world[rock_i]
+        
+        rock_i = np.argmin(rock_dist)   # Select nearest rock
+        #rock_i = np.argsort(rock_dist)[len(rock_dist)//2]  # Select middle rock
+
+        rock_world_x = rock_x_world[rock_i]
+        rock_world_y = rock_y_world[rock_i]
+
+        # Set flag and data for decision
+        Rover.found_rock = True
+        Rover.rock_pos = (rock_world_x, rock_world_y)
 
         # Mark with a dot of rock
         #   see `create_output_images()` in `supporting_functions.py`
-        Rover.worldmap[rock_y, rock_x, 1] = 255
-
-        Rover.found_rock = True
-
-        # _dist, _angle = to_polar_coords(rock_x, rock_y)
-        # print('rock:', rock_d, rock_angles)
-        # if (3 < rock_d):
-        #     Rover.nav_dists = [rock_d]
-        #     Rover.nav_angles = np.array([rock_angles[rock_i]] * Rover.stop_forward)
+        Rover.worldmap[rock_world_y, rock_world_x, 1] = 255
     else:
         Rover.vision_image[:, :, 1] = 0
         Rover.found_rock = False
-
-    # test
-    #Rover.send_pickup = True
 
 
     return Rover

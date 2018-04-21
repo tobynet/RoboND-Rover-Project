@@ -19,7 +19,7 @@ import time
 
 # Import functions for perception and decision making
 from perception import perception_step
-from decision import decision_step
+from decision import decision_step, MainMode, SubMode
 from supporting_functions import update_rover, create_output_images
 # Initialize socketio server and Flask application 
 # (learn more at: https://python-socketio.readthedocs.io/en/latest/)
@@ -52,16 +52,16 @@ class RoverState():
         self.nav_angles = None # Angles of navigable terrain pixels
         self.nav_dists = None # Distances of navigable terrain pixels
         self.ground_truth = ground_truth_3d # Ground truth worldmap
-        self.mode = 'forward' # Current mode (can be forward or stop)
+        self.mode = MainMode.FORWORD # Current mode (can be forward or stop, etc...)
         self.throttle_set = 0.25 # Throttle setting when accelerating
-        self.brake_set = 20 # Brake setting when braking
+        self.brake_set = 16 # Brake setting when braking
         # The stop_forward and go_forward fields below represent total count
         # of navigable terrain pixels.  This is a very crude form of knowing
         # when you can keep going and when you should stop.  Feel free to
         # get creative in adding new fields or modifying these!
         self.stop_forward = 300 # Threshold to initiate stopping
         self.go_forward = 500 # Threshold to go forward again
-        self.max_vel = 3 # Maximum velocity (meters/second)
+        self.max_vel = 2 # Maximum velocity (meters/second)
         # Image output from perception step
         # Update this image to display your intermediate analysis steps
         # on screen in autonomous mode
@@ -78,9 +78,17 @@ class RoverState():
         self.picking_up = 0 # Will be set to telemetry value data["picking_up"]
         self.send_pickup = False # Set to True to trigger rock pickup
 
+        # My variables
+        self.submode = None
+        self.submode_time = time.time()
+
+
         self.found_rock = False # Set to True to find rock
+        self.rock_pos = None # The position of found rock
+
+        self.old_pos = None
         self.stucked_time = time.time()   # Time of tucked srover
-        self.slipout_time_on_stucked = 4.0  # [sec]
+        self.slipout_time_on_stucked = 8.0  # [sec]
 
 # Initialize our rover 
 Rover = RoverState()
