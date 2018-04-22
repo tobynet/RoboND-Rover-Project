@@ -125,6 +125,10 @@ def create_output_images(Rover):
             fidelity = round(100*good_nav_pix/(tot_nav_pix), 1)
       else:
             fidelity = 0
+
+      # Draw Rover
+      DrawRover(Rover, map_add)
+
       # Flip the map for plotting so that the y-axis points upward in the display
       map_add = np.flipud(map_add).astype(np.float32)
       # Add some text about map and rock sample detection results
@@ -161,5 +165,20 @@ def create_output_images(Rover):
 
       return encoded_string1, encoded_string2
 
+
+def DrawRover(Rover, img):
+      x, y = np.array(Rover.pos).astype(int)
+
+      # Rover arrow
+      # to more simplye use line()
+      length = 15
+      angle = Rover.yaw/180*np.pi
+      dir_x = int(Rover.pos[0] + length * np.cos(angle))
+      dir_y = int(Rover.pos[1] + length * np.sin(angle))
+      cv2.arrowedLine(img, (x, y), (dir_x, dir_y), color=(220, 255, 0), thickness=2, tipLength=0.2) 
+
+      # Rover Position
+      w = 2 # Mark size on map
+      img[y-w:y+w, x-w:x+w] = (255,241,0)
 
 
