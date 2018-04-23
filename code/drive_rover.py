@@ -223,15 +223,12 @@ if __name__ == '__main__':
     
     #os.system('rm -rf IMG_stream/*')
     if args.image_folder != '':
-        print("Creating image folder at {}".format(args.image_folder))
-
         dirs = ['rover', 'vision', 'threshed_only']
         for dir_name in dirs:
             path = os.path.join(args.image_folder, dir_name)
+            print("Creating image folder at {}".format(path))
+            shutil.rmtree(path,ignore_errors=True)
             if not os.path.exists(path):
-                os.makedirs(path)
-            else:
-                shutil.rmtree(path,ignore_errors=True)
                 os.makedirs(path,exist_ok=True)
         print("Recording this run ...")
     else:
