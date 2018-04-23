@@ -73,13 +73,15 @@ def check_stuck(Rover, timeout_time = None):
 
 # Return nearst rock data, (dist,angle)|None
 def find_nearest_rock(Rover, debug_output: bool=False) -> t.Optional[t.Tuple[float, float]]:
-    if Rover.rock_pos is None:
-        return None
-    
     print('find_nearest_rock()')
-    delta = (Rover.rock_pos[0] - Rover.pos[0], Rover.rock_pos[1] - Rover.pos[1])
-    dist = np.sqrt(delta[0]**2 + delta[1]**2)
-    angle = np.arctan2(delta[1], delta[0])
+    if Rover.rock_pos is None:
+        delta = np.nan
+        dist = np.nan
+        angle = np.nan
+    else:
+        delta = (Rover.rock_pos[0] - Rover.pos[0], Rover.rock_pos[1] - Rover.pos[1])
+        dist = np.sqrt(delta[0]**2 + delta[1]**2)
+        angle = np.arctan2(delta[1], delta[0])
 
     if debug_output:
         norm_pitch = normalize_degree(Rover.pitch)
@@ -91,6 +93,8 @@ def find_nearest_rock(Rover, debug_output: bool=False) -> t.Optional[t.Tuple[flo
             'norm_pitch': norm_pitch, 'norm_roll': norm_roll,
             'delta': delta})
 
+    if Rover.rock_pos is None:
+        return None
     if invalid_attitude(Rover):
         return None
 
@@ -261,9 +265,9 @@ def decision_step(Rover):
 
                 #bias = np.std(Rover.nav_angles) * 180/np.pi # Add bias
                 #bias = -random.randint(0,4)
-                bias = 0
+                bias = random.randint(-5,0)
                 # Set steering to average angle clipped to the range +/- x
-                Rover.steer = np.clip(np.mean(Rover.nav_angles * 180/np.pi) + bias, -15, 15)
+                Rover.steer = np.clip(np.mean(Rover.nav_angles * 180/np.pi), -15 + bias, 15 + bias)
 
                 check_stuck(Rover)
 

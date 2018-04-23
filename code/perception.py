@@ -219,7 +219,8 @@ def perception_step(Rover):
         rock_world_y = rock_y_world[rock_i]
 
         # Ignore the rock in obstacles!
-        if Rover.worldmap[rock_world_x, rock_world_x, 0] == 0:
+        if Rover.worldmap[rock_world_x, rock_world_x, 0] > 0:
+        #if Rover.worldmap[rock_world_x, rock_world_x, 2] > 0:
             # Set flag and data for decision
             Rover.found_rock = True
             Rover.rock_pos = (rock_world_x, rock_world_y)
