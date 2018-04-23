@@ -127,7 +127,7 @@ def create_output_images(Rover):
             fidelity = 0
 
       # Draw Rover
-      DrawRover(Rover, map_add)
+      draw_rover(Rover, map_add)
 
       # Flip the map for plotting so that the y-axis points upward in the display
       map_add = np.flipud(map_add).astype(np.float32)
@@ -166,7 +166,7 @@ def create_output_images(Rover):
       return encoded_string1, encoded_string2
 
 
-def DrawRover(Rover, img):
+def draw_rover(Rover, img):
       x, y = np.array(Rover.pos).astype(int)
 
       # Rover arrow
