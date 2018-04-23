@@ -16,6 +16,7 @@ import json
 import pickle
 import matplotlib.image as mpimg
 import time
+import glob
 
 # Import functions for perception and decision making
 from perception import perception_step
@@ -82,6 +83,7 @@ class RoverState():
         self.submode = None
         self.submode_time = time.time()
 
+        self.threshed_only_image = np.zeros((160, 320, 3), dtype=np.float)  # like vision_image 
 
         self.found_rock = False # Set to True to find rock
         self.rock_pos = None # The position of found rock
@@ -155,11 +157,24 @@ def telemetry(sid, data):
         # Conditional to save image frame if folder was specified
         if args.image_folder != '':
             timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
-            image_filename = os.path.join(args.image_folder, timestamp)
-            image.save('{}.jpg'.format(image_filename))
-
+            image_save_with_jpg(image, 'rover', timestamp)
+            
+            image_save_with_jpg(
+                Image.fromarray(Rover.vision_image.astype(np.uint8)),
+                'vision', timestamp)
+            image_save_with_jpg(
+                Image.fromarray(Rover.threshed_only_image.astype(np.uint8)),
+                'threshed_only', timestamp)
     else:
         sio.emit('manual', data={}, skip_sid=True)
+
+
+# Save Image
+def image_save_with_jpg(image, name, timestamp):
+    # Image from Rover 
+    image_filename = os.path.join(args.image_folder, name, timestamp)
+    image.save('{}.jpg'.format(image_filename))
+
 
 @sio.on('connect')
 def connect(sid, environ):
@@ -209,11 +224,15 @@ if __name__ == '__main__':
     #os.system('rm -rf IMG_stream/*')
     if args.image_folder != '':
         print("Creating image folder at {}".format(args.image_folder))
-        if not os.path.exists(args.image_folder):
-            os.makedirs(args.image_folder)
-        else:
-            shutil.rmtree(args.image_folder)
-            os.makedirs(args.image_folder)
+
+        dirs = ['rover', 'vision', 'threshed_only']
+        for dir_name in dirs:
+            path = os.path.join(args.image_folder, dir_name)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            else:
+                shutil.rmtree(path)
+                os.makedirs(path)
         print("Recording this run ...")
     else:
         print("NOT recording this run ...")

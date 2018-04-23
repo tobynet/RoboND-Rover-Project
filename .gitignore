@@ -109,3 +109,4 @@ venv.bak/
 ## Jupyter notebook
 code/*Notebook.html
 #code/*Notebook.py
+/output/*/

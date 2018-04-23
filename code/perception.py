@@ -231,4 +231,10 @@ def perception_step(Rover):
         Rover.found_rock = False
 
 
+    # DEBUG: Make threshed only image before transform
+    _thres_img = color_thresh(img)
+    Rover.threshed_only_image[:,:,2] = _thres_img * 255
+    Rover.threshed_only_image[:,:,0] = np.absolute(np.float32(_thres_img) - 1) * np.ones_like(img[:,:,0])
+    Rover.threshed_only_image[:,:,1] = find_rocks_by_hsv(img)
+
     return Rover
