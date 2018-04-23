@@ -260,6 +260,7 @@ def decision_step(Rover):
                 Rover.brake = 0
 
                 #bias = np.std(Rover.nav_angles) * 180/np.pi # Add bias
+                #bias = -random.randint(0,4)
                 bias = 0
                 # Set steering to average angle clipped to the range +/- x
                 Rover.steer = np.clip(np.mean(Rover.nav_angles * 180/np.pi) + bias, -15, 15)

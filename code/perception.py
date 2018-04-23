@@ -123,13 +123,12 @@ def perception_step(Rover):
     masked_height = int(_warped_img.shape[0] / 4)
     #h, w, _ = img.shape
     warped_img = np.copy(_warped_img)
-    _mask_h = 60
-    warped_img[:_mask_h,:] = 0
+    warped_img[:100,:] = 0
     #warped_img[:60,:] = 0
     #warped_img[:,:int(w/6)] = 0
     #warped_img[:,int(w/6):] = 0
     #warped_img[:80,:] = 0
-    warped_obst_img[:_mask_h,:] = 0
+    warped_obst_img[:80,:] = 0
 
     # 3) Apply color threshold to identify navigable terrain/obstacles/rock samples
     _threshed_navi_img = color_thresh(warped_img, (160, 160, 160))
@@ -183,7 +182,7 @@ def perception_step(Rover):
     #Rover.worldmap[obst_y_world, obst_x_world, 0] = 255
 
     # override blue on red
-    Rover.worldmap[Rover.worldmap[:,:,2] > 0, 0] = 0
+    #Rover.worldmap[Rover.worldmap[:,:,2] > 0, 0] = 0
 
     # 8) Convert rover-centric pixel positions to polar coordinates
     dist, angles = to_polar_coords(navi_xpix, navi_ypix)
