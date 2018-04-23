@@ -231,7 +231,8 @@ if __name__ == '__main__':
         for dir_name in dirs:
             path = os.path.join(args.image_folder, dir_name)
             print("Creating image folder at {}".format(path))
-            shutil.rmtree(path,ignore_errors=True)
+            if os.path.exists(path):
+                shutil.rmtree(path)
             if not os.path.exists(path):
                 os.makedirs(path,exist_ok=True)
         print("Recording this run ...")

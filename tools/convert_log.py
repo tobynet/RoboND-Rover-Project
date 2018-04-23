@@ -48,7 +48,10 @@ with open(args.input_filename, 'r') as f:
 
 
 # To JSON like format?
-json_like = [ s.replace('(','[').replace(')',']').replace("'", '"') for s in matched ]
+json_like = [
+    s.replace('(','[').replace(')',']').replace("'", '"') \
+     .replace(' None', ' null').replace(' nan', ' null') \
+    for s in matched ]
 
 # print(len(json_like))
 # print(''.join(json_like[:2]))
