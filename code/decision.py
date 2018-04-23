@@ -3,6 +3,7 @@ import time
 from enum import Enum
 import typing as t 
 import random
+from supporting_functions import normalize_degree
 
 # For mode
 class MainMode(Enum):
@@ -71,7 +72,7 @@ def check_stuck(Rover, timeout_time = None):
     Rover.old_pos = Rover.pos.copy()
 
 # Return nearst rock data, (dist,angle)|None
-def find_nearest_rock(Rover) -> t.Optional[t.Tuple[float, float]]:
+def find_nearest_rock(Rover, debug_output: bool=False) -> t.Optional[t.Tuple[float, float]]:
     if Rover.rock_pos is None:
         return None
     
@@ -80,11 +81,31 @@ def find_nearest_rock(Rover) -> t.Optional[t.Tuple[float, float]]:
     dist = np.sqrt(delta[0]**2 + delta[1]**2)
     angle = np.arctan2(delta[1], delta[0])
 
-    print('  @ position:', {'pos': Rover.pos, 'rock': Rover.rock_pos})
-    print('  @ delta:', delta)
-    print('  @ nearest_rock: ', {'dist': dist, 'angle': (angle, angle*180/np.pi), 'yaw': Rover.yaw})
-    
+    if debug_output:
+        norm_pitch = normalize_degree(Rover.pitch)
+        norm_roll = normalize_degree(Rover.roll)
+        print('  @ nearest_rock:',
+            {'pos': Rover.pos, 'rock': Rover.rock_pos,
+            'dist': dist, 'angle': angle, 'degree': angle*180/np.pi,
+            'yaw': Rover.yaw, 'pitch': Rover.pitch, 'roll': Rover.roll,
+            'norm_pitch': norm_pitch, 'norm_roll': norm_roll,
+            'delta': delta})
+
+    if invalid_attitude(Rover):
+        return None
+
     return (dist, angle)
+
+
+# Detect invalid attitude(pitch, roll or etc...)
+def invalid_attitude(Rover, threshold_pitch_degree=4, threshold_roll_degree=4) -> bool:
+    # -180..180(0 is really horizontal angle)
+    norm_pitch = normalize_degree(Rover.pitch)
+    norm_roll = normalize_degree(Rover.roll)
+
+    # Check angle
+    return (abs(norm_pitch) > threshold_pitch_degree) or\
+           (abs(norm_roll) > threshold_roll_degree)
 
 
 # Invoke back(do unstuck)
@@ -128,6 +149,8 @@ def do_back(Rover):
 def do_approch_rock_mode(Rover):
     result = find_nearest_rock(Rover)
     if result is None:
+        Rover.rock_pos = None
+        Rover.found_rock = False
         set_mode(Rover, MainMode.FORWORD, SubMode.NONE)
         return
     else:
@@ -336,10 +359,11 @@ def decision_step(Rover):
         Rover.found_rock = False
         set_mode(Rover, MainMode.FORWORD, SubMode.NONE)
 
-    print("pickup flags: ", {
+    print("@ pickup flags: ", {
         'near_sample': Rover.near_sample, 
         'picking_up': Rover.picking_up, 
         'send_pickup': Rover.send_pickup})
+    find_nearest_rock(Rover, debug_output=True) # for debug
     print("decision_step() DONE.")
     
     return Rover

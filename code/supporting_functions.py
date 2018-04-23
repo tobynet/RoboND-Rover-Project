@@ -182,3 +182,6 @@ def DrawRover(Rover, img):
       img[y-w:y+w, x-w:x+w] = (255,241,0)
 
 
+def normalize_degree(deg):
+    """0..180..360 -> -180..0..180"""
+    return deg if deg <= 180 else deg - 360
