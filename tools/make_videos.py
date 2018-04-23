@@ -19,3 +19,4 @@ def save_with_mp4(output_dir, name):
 save_with_mp4(OUTPUT_DIR, 'rover')
 save_with_mp4(OUTPUT_DIR, 'threshed_only')
 save_with_mp4(OUTPUT_DIR, 'vision')
+save_with_mp4(OUTPUT_DIR, 'worldmap')

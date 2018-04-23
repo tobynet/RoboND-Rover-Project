@@ -84,6 +84,7 @@ class RoverState():
         self.submode_time = time.time()
 
         self.threshed_only_image = np.zeros((160, 320, 3), dtype=np.float)  # like vision_image 
+        self.worldmap_add = np.zeros_like(self.worldmap)
 
         self.found_rock = False # Set to True to find rock
         self.rock_pos = None # The position of found rock
@@ -165,6 +166,9 @@ def telemetry(sid, data):
             image_save_with_jpg(
                 Image.fromarray(Rover.threshed_only_image.astype(np.uint8)),
                 'threshed_only', timestamp)
+            image_save_with_jpg(
+                Image.fromarray(Rover.worldmap_add.astype(np.uint8)),
+                'worldmap', timestamp)
     else:
         sio.emit('manual', data={}, skip_sid=True)
 
@@ -223,7 +227,7 @@ if __name__ == '__main__':
     
     #os.system('rm -rf IMG_stream/*')
     if args.image_folder != '':
-        dirs = ['rover', 'vision', 'threshed_only']
+        dirs = ['rover', 'vision', 'threshed_only', 'worldmap']
         for dir_name in dirs:
             path = os.path.join(args.image_folder, dir_name)
             print("Creating image folder at {}".format(path))

@@ -152,6 +152,9 @@ def create_output_images(Rover):
       cv2.putText(map_add,"  Sub: "+str(submode_str), (0, 125), 
                   cv2.FONT_HERSHEY_COMPLEX, 0.4, (200, 200, 255), 1)
 
+      # Store for videos
+      Rover.worldmap_add = map_add
+
       # Convert map and vision image to base64 strings for sending to server
       pil_img = Image.fromarray(map_add.astype(np.uint8))
       buff = BytesIO()
