@@ -231,8 +231,8 @@ if __name__ == '__main__':
             if not os.path.exists(path):
                 os.makedirs(path)
             else:
-                shutil.rmtree(path)
-                os.makedirs(path)
+                shutil.rmtree(path,ignore_errors=True)
+                os.makedirs(path,exist_ok=True)
         print("Recording this run ...")
     else:
         print("NOT recording this run ...")
