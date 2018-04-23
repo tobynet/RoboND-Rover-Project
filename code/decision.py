@@ -72,7 +72,7 @@ def check_stuck(Rover, timeout_time = None):
     Rover.old_pos = Rover.pos.copy()
 
 # Return nearst rock data, (dist,angle)|None
-def find_nearest_rock(Rover, debug_output: bool=False) -> t.Optional[t.Tuple[float, float]]:
+def find_nearest_rock(Rover, check_detail: bool=True, debug_output: bool=False) -> t.Optional[t.Tuple[float, float]]:
     print('find_nearest_rock()')
     if Rover.rock_pos is None:
         delta = np.nan
@@ -83,9 +83,12 @@ def find_nearest_rock(Rover, debug_output: bool=False) -> t.Optional[t.Tuple[flo
         dist = np.sqrt(delta[0]**2 + delta[1]**2)
         angle = np.arctan2(delta[1], delta[0])
 
+    norm_pitch = normalize_degree(Rover.pitch)
+    norm_roll = normalize_degree(Rover.roll)
+
+    # To analyze logs. DO NOT DELETE BELOW LINES.
     if debug_output:
-        norm_pitch = normalize_degree(Rover.pitch)
-        norm_roll = normalize_degree(Rover.roll)
+
         print('  @ nearest_rock:',
             {'pos': Rover.pos, 'rock': Rover.rock_pos,
             'dist': dist, 'angle': angle, 'degree': angle*180/np.pi,
@@ -95,21 +98,37 @@ def find_nearest_rock(Rover, debug_output: bool=False) -> t.Optional[t.Tuple[flo
 
     if Rover.rock_pos is None:
         return None
-    if invalid_attitude(Rover):
+
+    if check_detail and not (\
+        #is_accepted_angle_of_rocks(angle) and \
+        is_accepted_distance_of_rocks(dist) and \
+        is_accepted_attitude(norm_pitch, norm_roll)):
         return None
 
     return (dist, angle)
 
 
-# Detect invalid attitude(pitch, roll or etc...)
-def invalid_attitude(Rover, threshold_pitch_degree=4, threshold_roll_degree=4) -> bool:
-    # -180..180(0 is really horizontal angle)
-    norm_pitch = normalize_degree(Rover.pitch)
-    norm_roll = normalize_degree(Rover.roll)
+# Check angle(yaw) between rover and rocks
+def is_accepted_angle_of_rocks(angle, range_angle: float = np.pi/4) -> bool:
+    # 0..2*pi -> -pi..0..pi
+    angles_abs = np.abs(angle if angle <= np.pi else angle - 2*np.pi)
+    # In range ?
+    return (angles_abs > np.pi/2 - range_angle) and (angles_abs < np.pi/2 + range_angle)
 
-    # Check angle
-    return (abs(norm_pitch) > threshold_pitch_degree) or\
-           (abs(norm_roll) > threshold_roll_degree)
+
+# Check distance between rover and rocks
+def is_accepted_distance_of_rocks(dist, threshold: float = 5.0) -> bool:
+    return dist < threshold
+
+
+# Check rover's pitch or roll angles
+# Etc.
+#   thre_pitch = (-0.05, 0.001)
+#   thre_roll = (-0.05, 0.05)
+def is_accepted_attitude(norm_pitch, norm_roll, thre_pitch = (-0.1, 0.1), thre_roll = (-0.9, 0.9)) -> bool:
+    pitch_ok = (thre_pitch[0] <= norm_pitch) and (norm_pitch <= thre_pitch[1])
+    roll_ok = (thre_roll[0] <= norm_roll) and (norm_roll <= thre_roll[1])
+    return pitch_ok and roll_ok
 
 
 # Invoke back(do unstuck)
@@ -151,10 +170,8 @@ def do_back(Rover):
 
 # Invoke approch rock 
 def do_approch_rock_mode(Rover):
-    result = find_nearest_rock(Rover)
+    result = find_nearest_rock(Rover, check_detail=False)
     if result is None:
-        Rover.rock_pos = None
-        Rover.found_rock = False
         set_mode(Rover, MainMode.FORWORD, SubMode.NONE)
         return
     else:
@@ -167,9 +184,6 @@ def do_approch_rock_mode(Rover):
     # Humm... (inefficient delta)
     delta_angle = rock_deg - yaw
 
-    # if (len(Rover.nav_angles) >= Rover.stop_forward):
-    # else:
-        
     # Turn to nearest rock
     if Rover.submode == SubMode.TURN_TO_ROCK:
         Rover.throttle = 0
@@ -346,14 +360,13 @@ def decision_step(Rover):
         Rover.steer = 0
         Rover.brake = 0
 
-    # When found rock 
-    # if (Rover.found_rock) and (Rover.mode in [ MainMode.FORWORD, MainMode.BACK ]):
-    #     if len(Rover.nav_angles) > Rover.stop_forward:
-    #         print("Found rock, change mode to approach_rock!")
-    #         print('  @', {'found_rock': Rover.found_rock, 'rock_pos': Rover.rock_pos})
-    #         set_mode(Rover, MainMode.APPROACH_ROCK, SubMode.TURN_TO_ROCK)
-    #     else:
-    #         print("Found rock, but no road to forward now!")
+    # When found rock
+    if Rover.found_rock \
+            and (find_nearest_rock(Rover) is not None) \
+            and Rover.mode in [ MainMode.FORWORD, MainMode.BACK ]:
+        print("Found rock, change mode to approach_rock!")
+        set_mode(Rover, MainMode.APPROACH_ROCK, SubMode.TURN_TO_ROCK)
+
 
     # If in a state where want to pickup a rock send pickup command
     if Rover.near_sample and Rover.vel == 0 and not Rover.picking_up:
@@ -368,6 +381,7 @@ def decision_step(Rover):
         'near_sample': Rover.near_sample, 
         'picking_up': Rover.picking_up, 
         'send_pickup': Rover.send_pickup})
+
     find_nearest_rock(Rover, debug_output=True) # for debug
     print("decision_step() DONE.")
     
