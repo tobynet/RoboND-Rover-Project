@@ -17,13 +17,13 @@
 # 
 # **Run the next cell to get code highlighting in the markdown cells.**
 
-# In[467]:
+# In[2]:
 
 
 get_ipython().run_cell_magic('HTML', '', '<style> code {background-color : orange !important;} </style>')
 
 
-# In[468]:
+# In[1]:
 
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -44,7 +44,7 @@ imageio.plugins.ffmpeg.download()
 # 
 # Next, read in and display a random image from the `test_dataset` folder
 
-# In[469]:
+# In[3]:
 
 
 path = '../test_dataset/IMG/*'
@@ -58,7 +58,7 @@ plt.imshow(image)
 # ## Calibration Data
 # Read in and display example grid and rock sample calibration images.  You'll use the grid for perspective transform and the rock image for creating a new color selection that identifies these samples of interest. 
 
-# In[470]:
+# In[4]:
 
 
 # In the simulator you can toggle on a grid on the ground for calibration
@@ -80,7 +80,7 @@ plt.imshow(rock_img)
 # 
 # Define the perspective transform function from the lesson and test it on an image.
 
-# In[471]:
+# In[6]:
 
 
 # Define a function to perform a perspective transform
@@ -127,7 +127,7 @@ plt.imshow(warped)
 # 
 # * **Beware However:** if you start manipulating images with OpenCV, keep in mind that it defaults to `BGR` instead of `RGB` color space when reading/writing images, so things can get confusing.
 
-# In[472]:
+# In[7]:
 
 
 # Identify pixels above the threshold
@@ -154,7 +154,7 @@ plt.subplot(221); plt.imshow(threshed, cmap='gray')
 plt.show()
 
 
-# In[473]:
+# In[8]:
 
 
 # Identify pixels above the range using hsv color space 
@@ -206,7 +206,7 @@ masked_warped_rock_img = cv2.bitwise_and(warped_with_rock, warped_with_rock, mas
 plt.subplot(236); plt.imshow(masked_warped_rock_img)  
 
 
-# In[474]:
+# In[9]:
 
 
 ## Find rock (岩を探す)
@@ -233,7 +233,7 @@ plt.subplot(121); plt.imshow(rock_img)
 plt.subplot(122); plt.imshow(threshed_rocks_img, cmap='gray')
 
 
-# In[475]:
+# In[10]:
 
 
 # Identify pixels above the range
@@ -250,7 +250,7 @@ rgb_to_hsv_color((197, 178, 163)) # ground
 rgb_to_hsv_color((189, 157, 0)) # rock
 
 
-# In[476]:
+# In[11]:
 
 
 ## For obstacles only (mask) 障害のみ
@@ -268,7 +268,7 @@ plt.subplot(223); plt.imshow(full_img, cmap='gray')
 plt.subplot(224); plt.imshow(warped_full_img, cmap='gray')  # 
 
 
-# In[477]:
+# In[21]:
 
 
 ## For navigable terrain only 道のみ
@@ -276,23 +276,35 @@ plt.subplot(224); plt.imshow(warped_full_img, cmap='gray')  #
 #hsv_navi_min = (10, 30, 120)
 #hsv_navi_max = (255, 230, 255)
 
-fig = plt.figure(figsize=(21,7))
+fig = plt.figure(figsize=(20,10))
 fig.tight_layout()
 
-plt.subplot(131); plt.imshow(rock_img)
-plt.subplot(132); plt.imshow(warped_with_rock)
+plt.subplot(221); plt.imshow(rock_img)
+plt.subplot(222); plt.imshow(warped_with_rock)
 
 normal_threshed_navi = color_thresh(warped_with_rock)
 #_img = color_in_range_by_hsv(warped_with_rock, hsv_navi_min, hsv_navi_max)
 
-plt.subplot(133); plt.imshow(normal_threshed_navi, cmap='gray')
+plt.subplot(223); plt.imshow(normal_threshed_navi, cmap='gray')
 threshed_navi = normal_threshed_navi
+
+# Reduce mask
+kernel = np.ones((5,5), np.uint8)
+# kernel = np.array([
+#     [0,1,1,1,0],
+#     [0,1,1,1,0],
+#     [0,1,1,1,0],
+#     [0,0,0,0,0],
+#     [0,0,0,0,0]], np.uint8) 
+threshed_navi_img = cv2.erode(normal_threshed_navi, kernel)
+
+plt.subplot(224); plt.imshow(threshed_navi_img, cmap='gray')
 
 
 # ## Coordinate Transformations
 # Define the functions used to do coordinate transforms and apply them to an image.
 
-# In[478]:
+# In[13]:
 
 
 # Define a function to convert from image coords to rover coords
@@ -381,7 +393,7 @@ plt.arrow(0, 0, x_arrow, y_arrow, color='red', zorder=2, head_width=10, width=2)
 # After that, we'll define a class to store telemetry data and pathnames to images.  When you instantiate this class (`data = Databucket()`) you'll have a global variable called `data` that you can refer to for telemetry and map data within the `process_image()` function in the following cell.  
 # 
 
-# In[479]:
+# In[14]:
 
 
 # Import pandas and read in csv file as a dataframe
@@ -415,7 +427,7 @@ class Databucket():
 data = Databucket()
 
 
-# In[480]:
+# In[15]:
 
 
 ############# Test of make worldmap ################
@@ -477,7 +489,7 @@ plt.subplot(133); plt.imshow(np.uint8(_map_add))
 # 
 # To start with, you can simply run the next three cells to see what happens, but then go ahead and modify them such that the output video demonstrates your mapping process.  Feel free to get creative!
 
-# In[481]:
+# In[16]:
 
 
 
@@ -585,7 +597,7 @@ def process_image(img):
 # Use the [moviepy](https://zulko.github.io/moviepy/) library to process images and create a video.
 #   
 
-# In[482]:
+# In[17]:
 
 
 # Import everything needed to edit/save/watch video clips
