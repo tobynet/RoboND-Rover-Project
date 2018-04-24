@@ -189,8 +189,8 @@ def do_approch_rock_mode(Rover):
         Rover.throttle = 0
         
         # Turn
-        #_max_delta = abs(delta_angle) / 5
-        _max_delta = 10
+        #_max_delta = abs(delta_angle) / 8
+        _max_delta = 10 + random.randint(-5,0)
         Rover.steer = np.clip(delta_angle, -_max_delta, _max_delta)
         print('@ delta_angle:', {'delta_angle': delta_angle, '_max_delta': _max_delta})
 
@@ -213,11 +213,11 @@ def do_approch_rock_mode(Rover):
         Rover.steer = 0
         Rover.brake = 0
 
-        if abs(delta_angle) > 6.0:
+        if abs(delta_angle) > 8.0:
             set_submode(Rover, SubMode.TURN_TO_ROCK)
 
         # Close enough
-        if rock_dist < 0.4:
+        if rock_dist < 0.2:
             Rover.brake = Rover.brake_set
             Rover.throttle = 0
             set_submode(Rover, SubMode.READY_TO_PICK)
@@ -363,7 +363,7 @@ def decision_step(Rover):
     # When found rock
     if Rover.found_rock \
             and (find_nearest_rock(Rover) is not None) \
-            and Rover.mode in [ MainMode.FORWORD, MainMode.BACK ]:
+            and Rover.mode in [ MainMode.FORWORD ]:
         print("Found rock, change mode to approach_rock!")
         set_mode(Rover, MainMode.APPROACH_ROCK, SubMode.TURN_TO_ROCK)
 
