@@ -8,7 +8,7 @@ python drive_rover.py ../output/ 2>&1 > ..\logs\drive_rover.log & type ..\logs\d
 popd
 
 pushd "%~dp0"
-python tools/convert_log.py logs/drive_rover.log ../note/rocks.json
+python tools/convert_log.py logs/drive_rover.log logs/rocks.json
 python tools/make_videos.py
 
 rem copy /Y output\worldmap.mp4 ..\note\images\worldmap.mp4

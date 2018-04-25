@@ -114,7 +114,7 @@ And another!
 
     ![visualization rover trails][visualization rover trails]
 
-    > 📄 Above image is visualized from the log. (The notebook is not included this repository yet.)
+    > 📄 Above image is visualized from the log. ( [The notebook is here](./code/visualize_logs.ipynb).)
 
   * Add some simple and effective code **to estimate rock positions**.
     * To **check angle** against the rover : `is_accepted_angle_of_rocks()`

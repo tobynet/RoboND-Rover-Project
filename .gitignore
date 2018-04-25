@@ -108,5 +108,8 @@ venv.bak/
 
 ## Jupyter notebook
 code/*Notebook.html
+.ipynb_checkpoints/
 #code/*Notebook.py
 /output/*/
+/logs/*.json
+
