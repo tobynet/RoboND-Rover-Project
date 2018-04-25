@@ -3,7 +3,7 @@
 [![Rover simulator Video](https://img.youtube.com/vi/bL0hAbSR-Oo/0.jpg)](https://youtu.be/bL0hAbSR-Oo)
 
 
-📄 Click to see the simulator video.
+📄 Click on image to see the simulator video.
 
 ---
 
@@ -108,7 +108,7 @@ And another!
     (🎥 [Here is the video link][threshed only video].)
 
 * In decision step:
-  * **Add `back` mode** to prevent unstacked rover.
+  * **Add `back` mode** to prevent getting stuck the rover.
   * **Add `approach rock` mode** to pick up rocks.
   * 🔎 Add more logging code to debug, visualization. (in `find_nearest_rock()`)
 
@@ -124,7 +124,7 @@ And another!
       > 📝 To **prevent incorrect images from camera**.
 
   * Add sub-mode(`SubMode`) to easy to write nested mode, the decision tree.
-  * **Add fluctuation in decision parameters** to prevent unstuck, due to repeat the same action.
+  * **Add fluctuation in decision parameters** to prevent getting stuck, due to repeat the same action.
     * 💡 Simple implementation, using 🎲 `random.randint()`.
 
 * Others:
@@ -194,4 +194,3 @@ And another!
   * FPS: `20`
   * Screen Recorder: `Game DVR on Windows 10`
     * Press `Win + Alt + R` to record window.
-
